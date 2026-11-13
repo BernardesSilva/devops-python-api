@@ -1,194 +1,141 @@
-# API Python para demonstrar DevOps
+# 🚀 API DevOps de Tarefas — Pipeline CI/CD com Docker, GitHub Actions e AWS
 
-Repositório didático para apresentar, em uma única aplicação, três ideias que se conectam:
+![Python](https://img.shields.io/badge/Python-3.13-blue?logo=python&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688?logo=fastapi&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-Container-2496ED?logo=docker&logoColor=white)
+![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-CI%2FCD-2088FF?logo=github-actions&logoColor=white)
+![AWS](https://img.shields.io/badge/AWS-ECR_%26_EC2-FF9900?logo=amazon-aws&logoColor=white)
 
-1. uma API HTTP escrita em Python;
-2. integração contínua com GitHub Actions;
-3. execução reproduzível com Docker.
+Projeto desenvolvido para a disciplina de **Integração DevOps**, demonstrando a implementação completa de uma esteira automatizada de **Integração Contínua (CI)** e **Entrega Contínua (CD)** para uma API REST desenvolvida em Python com FastAPI.
 
-O projeto utiliza FastAPI, pytest, Ruff, GitHub Actions e Docker. Os dados ficam em memória para manter a atenção da aula no fluxo DevOps, sem introduzir banco de dados.
+* **Aluno:** Leandro Bernardes da Silva (RA: `22503400`)
+* **Repositório:** [github.com/BernardesSilva/devops-python-api](https://github.com/BernardesSilva/devops-python-api)
+* **Aplicação em Produção (AWS EC2):** [http://54.221.157.241/](http://54.221.157.241/)
+* **Documentação Interativa (Swagger UI):** [http://54.221.157.241/docs](http://54.221.157.241/docs)
 
-## O que os estudantes devem observar
+---
 
-- O código funciona localmente e no runner do GitHub.
-- A mesma suíte de testes é executada pelo desenvolvedor e pelo pipeline.
-- O Dockerfile descreve o ambiente necessário para executar a API.
-- O pipeline só testa o container depois que qualidade e testes foram aprovados.
-- Logs, cobertura e relatórios funcionam como evidências, não apenas como mensagens coloridas.
+## 📋 Índice
 
-## Estrutura do repositório
+1. [Arquitetura da Solução](#-arquitetura-da-solução)
+2. [Estrutura do Projeto](#-estrutura-do-projeto)
+3. [Endpoints da API](#-endpoints-da-api)
+4. [Execução Local](#-execução-local)
+5. [Esteiras de CI/CD (GitHub Actions)](#-esteiras-de-cicd-github-actions)
+6. [Segredos Configurados (GitHub Secrets)](#-segredos-configurados-github-secrets)
+
+---
+
+## 🏗️ Arquitetura da Solução
+
+O fluxo DevOps deste repositório automatiza todo o ciclo de vida da aplicação, desde a validação do código até a publicação em nuvem:
 
 ```text
-.
-├── .github/workflows/ci.yml   # pipeline de integração contínua
+[Desenvolvedor] 
+      │ (git push / Pull Request)
+      ▼
+[GitHub Actions - CI] ──► Instala dependências e executa testes com Pytest
+      │ (Merge na branch main)
+      ▼
+[GitHub Actions - CD] ──► Constrói imagem Docker e envia para o Amazon ECR
+      │ (Deploy via SSH)
+      ▼
+[Instância AWS EC2]   ──► Faz pull da nova imagem e sobe o contentor na porta 80
+```
+
+---
+
+## 📂 Estrutura do Projeto
+
+```text
+devops-python-api/
+├── .github/
+│   └── workflows/
+│       ├── ci.yml             # Workflow de Integração Contínua (Testes no PR)
+│       └── deploy.yml         # Workflow de Entrega Contínua (Build ECR + Deploy EC2)
 ├── app/
-│   ├── __init__.py
-│   └── main.py                # API FastAPI
-├── docs/
-│   ├── API.md
-│   ├── DOCKER.md
-│   ├── GITHUB-ACTIONS.md
-│   └── ROTEIRO-AULA.md
-├── tests/test_api.py          # testes automatizados
-├── .dockerignore
-├── .python-version
-├── compose.yaml
-├── Dockerfile
-├── pyproject.toml             # configuração de pytest, cobertura e Ruff
-├── requirements.txt           # dependências de execução
-└── requirements-dev.txt       # dependências de desenvolvimento e CI
+│   └── main.py                # Código-fonte da API FastAPI
+├── tests/
+│   └── test_api.py            # Testes automatizados com Pytest e TestClient
+├── Dockerfile                 # Definição da imagem Docker da aplicação
+├── requirements.txt           # Dependências de produção
+└── README.md                  # Documentação do repositório
 ```
 
-## 1. Executar localmente
+---
 
-Pré-requisitos: Git e Python 3.13.
+## 🔌 Endpoints da API
 
-### Linux e macOS
+A API disponibiliza rotas para verificação de saúde e gestão simples de tarefas:
 
+| Método | Rota | Descrição |
+| :--- | :--- | :--- |
+| `GET` | `/` | Mensagem inicial de boas-vindas da API. |
+| `GET` | `/health` | Verifica o estado de saúde e a versão ativa do serviço (`{"status": "ok"}`). |
+| `GET` | `/tasks` | Lista todas as tarefas registadas. |
+| `POST` | `/tasks` | Cria uma nova tarefa. |
+| `PATCH` | `/tasks/{task_id}/done` | Marca uma tarefa específica como concluída. |
+
+---
+
+## 💻 Execução Local
+
+### Pré-requisitos
+* Python 3.13+ ou Docker instalado.
+
+### Executando com Python
+1. Clone o repositório:
+   ```bash
+   git clone https://github.com/BernardesSilva/devops-python-api.git
+   cd devops-python-api
+   ```
+2. Crie e ative um ambiente virtual, depois instale as dependências:
+   ```bash
+   python -m venv .venv
+   source .venv/bin/activate  # No Windows: .venv\Scripts\activate
+   pip install -r requirements.txt pytest httpx
+   ```
+3. Execute os testes automatizados:
+   ```bash
+   pytest
+   ```
+4. Inicie o servidor local:
+   ```bash
+   uvicorn app.main:app --reload --port 8000
+   ```
+   Aceda a `http://localhost:8000/docs`.
+
+### Executando com Docker
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate
-python -m pip install --requirement requirements-dev.txt
-uvicorn app.main:app --reload
+docker build -t devops-python-api .
+docker run -d --name api -p 8000:8000 devops-python-api
 ```
 
-### Windows PowerShell
+---
 
-```powershell
-py -3.13 -m venv .venv
-.venv\Scripts\Activate.ps1
-python -m pip install --requirement requirements-dev.txt
-uvicorn app.main:app --reload
-```
+## ⚙️ Esteiras de CI/CD (GitHub Actions)
 
-Acesse:
+### 1. Integração Contínua (`.github/workflows/ci.yml`)
+* **Gatilho:** Abertura ou atualização de *Pull Requests* direcionados à branch `main`.
+* **Ações:** Configura o ambiente Python 3.13, instala as dependências da aplicação e de testes (`pytest`, `httpx`) e valida a suíte de testes antes de permitir o *merge*.
 
-- API: <http://localhost:8000>
-- documentação Swagger: <http://localhost:8000/docs>
-- verificação de saúde: <http://localhost:8000/health>
+### 2. Entrega Contínua (`.github/workflows/deploy.yml`)
+* **Gatilho:** *Push* ou *merge* efetuado na branch `main`.
+* **Ações:**
+  1. Autentica-se na AWS e realiza o login no **Amazon ECR**.
+  2. Constrói a imagem Docker (`docker build`) e envia a tag `latest` para o repositório `devops-python-api` no ECR.
+  3. Conecta-se via **SSH** à instância **Amazon EC2** (`54.221.157.241`), descarrega a imagem atualizada, encerra o contentor antigo e inicia o novo mapeando a porta `80` do host para a porta `8000` do contentor.
 
-## 2. Experimentar a API
+---
 
-```bash
-curl http://localhost:8000/health
+## 🔐 Segredos Configurados (GitHub Secrets)
 
-curl -X POST http://localhost:8000/tasks \
-  -H "Content-Type: application/json" \
-  -d '{"title":"Estudar integração contínua"}'
+Para garantir a segurança das credenciais de infraestrutura, os seguintes segredos foram configurados em *Settings > Secrets and variables > Actions*:
 
-curl http://localhost:8000/tasks
-
-curl -X PATCH http://localhost:8000/tasks/1/done
-```
-
-Endpoints:
-
-| Método | Caminho | Objetivo | Resposta esperada |
-|---|---|---|---|
-| GET | `/` | Apresentar a API | `200` |
-| GET | `/health` | Informar saúde e versão | `200` |
-| GET | `/tasks` | Listar tarefas | `200` |
-| POST | `/tasks` | Criar uma tarefa | `201` |
-| PATCH | `/tasks/{id}/done` | Concluir uma tarefa | `200` ou `404` |
-
-Veja a explicação do código em [docs/API.md](docs/API.md).
-
-## 3. Executar as verificações locais
-
-```bash
-ruff check .
-ruff format --check .
-pytest --cov=app --cov-report=term-missing
-```
-
-Esses comandos são deliberadamente iguais aos usados no GitHub Actions. Se uma verificação falhar localmente, ela também deverá falhar no pipeline.
-
-Para aplicar a formatação automaticamente:
-
-```bash
-ruff format .
-```
-
-## 4. Publicar no GitHub e acionar a CI
-
-O diretório já é inicializado como repositório Git local. Crie um repositório vazio no GitHub e execute:
-
-```bash
-git remote add origin https://github.com/SEU-USUARIO/devops-python-api.git
-git push -u origin main
-```
-
-O arquivo `.github/workflows/ci.yml` dispara o pipeline em três situações:
-
-- `push` na branch `main`;
-- `pull_request` destinado à `main`;
-- execução manual pela aba **Actions**.
-
-Na aba **Actions**, abra a execução e faça a leitura nesta ordem:
-
-1. workflow;
-2. job;
-3. primeiro step que falhou;
-4. comando e mensagem que explicam a falha.
-
-A explicação detalhada do YAML está em [docs/GITHUB-ACTIONS.md](docs/GITHUB-ACTIONS.md).
-
-## 5. Executar com Docker
-
-```bash
-docker build -t devops-python-api:v1 .
-docker run --rm -p 8000:8000 --name devops-python-api devops-python-api:v1
-```
-
-Em outro terminal:
-
-```bash
-curl http://localhost:8000/health
-docker ps
-docker logs devops-python-api
-```
-
-Com Docker Compose:
-
-```bash
-docker compose up --build
-docker compose down
-```
-
-Veja a leitura detalhada do Dockerfile em [docs/DOCKER.md](docs/DOCKER.md).
-
-## Falhas intencionais para demonstrar
-
-### Falha de teste
-
-Em `app/main.py`, altere temporariamente a versão do health check para `2.0.0`. O teste espera `1.0.0`, então o pytest e o pipeline devem falhar.
-
-### Falha de qualidade
-
-Adicione um import não utilizado no início de `app/main.py`:
-
-```python
-import os
-```
-
-O step `ruff check .` localizará o problema.
-
-### Falha de rede no container
-
-No `Dockerfile`, troque `--host 0.0.0.0` por `--host 127.0.0.1`. O processo iniciará, mas o serviço não ficará acessível pela porta publicada no host.
-
-## Próximos desafios
-
-- Adicionar um endpoint `DELETE /tasks/{id}` e seus testes.
-- Executar os testes em uma matriz com Python 3.12, 3.13 e 3.14.
-- Publicar a imagem em um registry somente após a aprovação dos testes.
-- Substituir o armazenamento em memória por um banco de dados.
-
-## Referências oficiais
-
-- [GitHub Actions: criar e testar Python](https://docs.github.com/pt/actions/tutorials/build-and-test-code/building-and-testing-python)
-- [actions/checkout](https://github.com/actions/checkout)
-- [actions/setup-python](https://github.com/actions/setup-python)
-- [actions/upload-artifact](https://github.com/actions/upload-artifact)
-- [FastAPI](https://fastapi.tiangolo.com/)
-- [Docker para Python](https://docs.docker.com/language/python/)
+* `AWS_ACCESS_KEY_ID` — Chave de acesso IAM da AWS.
+* `AWS_SECRET_ACCESS_KEY` — Chave secreta IAM da AWS.
+* `AWS_SESSION_TOKEN` — Token de sessão temporário (AWS Academy).
+* `AWS_REGION` — Região AWS utilizada (`us-east-1`).
+* `EC2_HOST` — IP público da instância EC2 (`54.221.157.241`).
+* `EC2_USER` — Utilizador SSH da instância Linux.
+* `EC2_SSH_KEY` — Chave privada `.pem` para autenticação SSH.
